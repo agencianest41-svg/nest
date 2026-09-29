@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
+/*
+ * Tokens NEST — visual claro e neutro. A interface é monocromática (tinta sobre
+ * branco); a cor da marca do cliente aparece só na identidade: logo e pequenos
+ * destaques (--tenant, --tenant-accent, sobrescritos em tenant-theme.tsx).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --surface-canvas: #fafafa;
+  --surface: #ffffff;
+  --line: #ececef;
+  --line-strong: #dcdce1;
+  --ink: #18181b;
+  --ink-muted: #52525b;
+  --ink-subtle: #71717a;
+
+  /* Ação principal e estados de seleção: neutros, iguais para todos os clientes. */
+  --brand: #18181b;
+  --brand-hover: #3f3f46;
+  --brand-soft: #f4f4f5;
+  --on-brand: #ffffff;
+  --accent: #d4d4d8;
+  --accent-ink: #52525b;
+
+  /* Identidade do cliente. */
+  --tenant: #18181b;
+  --tenant-accent: #a1a1aa;
+
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --info: #1d4ed8;
+
+  --font-display-tenant: var(--font-dm-serif), Georgia, serif;
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-canvas: var(--surface-canvas);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-tenant: var(--tenant);
+  --color-tenant-accent: var(--tenant-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  /* Títulos da interface: sans, peso médio. A fonte do cliente fica só no logo (font-brand). */
+  --font-display: var(--font-inter), system-ui, sans-serif;
+  --font-brand: var(--font-display-tenant);
+
+  /* Inter variável: "semibold" um pouco mais leve deixa listas e tabelas menos carregadas. */
+  --font-weight-semibold: 560;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-heading: 15px;
+  --text-heading--line-height: 22px;
+  --text-title: 17px;
+  --text-title--line-height: 24px;
+  --text-metric: 24px;
+  --text-metric--line-height: 30px;
+  --text-page: 26px;
+  --text-page--line-height: 32px;
+
+  --radius-sm: 8px;
+  --radius: 8px;
+  --radius-md: 12px;
+
+  --shadow-xs: 0 1px 2px 0 rgb(24 24 27 / 0.04);
+  --shadow-overlay: 0 12px 32px -8px rgb(24 24 27 / 0.16);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface-canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* Rótulos e títulos de seção: pequenos, discretos, sem caixa alta. */
+.label {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Itens de grid encolhem em vez de estourar a coluna (tabelas e formulários largos). */
+.grid > * {
+  min-width: 0;
 }

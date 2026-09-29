@@ -1,0 +1,20 @@
+-- Índices para as chaves estrangeiras mais usadas em filtros e nas policies.
+create index if not exists tasks_tenant_project on public.tasks (tenant_id, project_id);
+create index if not exists plan_items_tenant_plan on public.plan_items (tenant_id, plan_id);
+create index if not exists monthly_plans_tenant_op on public.monthly_plans (tenant_id, operation_id);
+create index if not exists projects_tenant_op on public.projects (tenant_id, operation_id);
+create index if not exists memberships_user on public.memberships (user_id);
+create index if not exists operations_tenant_region on public.operations (tenant_id, region_id);
+create index if not exists calendar_events_tenant_op on public.calendar_events (tenant_id, operation_id);
+create index if not exists contract_items_contract on public.contract_items (tenant_id, contract_id);
+create index if not exists contracts_tenant_op on public.contracts (tenant_id, operation_id);
+create index if not exists kit_assets_asset on public.kit_assets (tenant_id, asset_id);
+create index if not exists asset_rights_tenant_asset on public.asset_rights (tenant_id, asset_id);
+create index if not exists asset_shares_to on public.asset_shares (to_tenant_id);
+create index if not exists assets_tenant_op on public.assets (tenant_id, operation_id);
+create index if not exists operation_sales_tenant_op on public.operation_sales (tenant_id, operation_id);
+create index if not exists briefs_partner on public.briefs (partner_id);
+create index if not exists brief_proposals_partner on public.brief_proposals (partner_id);
+create index if not exists partner_reviews_partner on public.partner_reviews (partner_id);
+create index if not exists time_entries_task on public.time_entries (task_id);
+create index if not exists time_entries_project on public.time_entries (project_id);
