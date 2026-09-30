@@ -109,7 +109,7 @@ export default async function CalendarioBasePage({ params, searchParams }: Props
           </form>
         </section>
       ) : (
-        <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="mt-6 grid items-start gap-6 xl:grid-cols-[1fr_320px]">
           <div className="space-y-6">
             <section className={card}>
               <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
@@ -128,7 +128,7 @@ export default async function CalendarioBasePage({ params, searchParams }: Props
                   <PendingButton
                     className={btnPrimary}
                     pendingLabel="Liberando…"
-                    confirm={`Liberar ${items.length} pautas para ${target.length} lojas? Cada loja recebe o que cabe no seu pacote.${base.released_at ? " Só as pautas novas serão enviadas." : ""}`}
+                    confirm={`Liberar ${items.length} ${items.length === 1 ? "pauta" : "pautas"} para ${target.length} ${target.length === 1 ? "loja" : "lojas"}? Cada loja recebe o que cabe no seu pacote.${base.released_at ? " Só as pautas novas serão enviadas." : ""}`}
                   >
                     <Send className="size-4" aria-hidden />
                     {base.released_at ? "Liberar novidades" : "Liberar para a rede"}
@@ -175,7 +175,7 @@ export default async function CalendarioBasePage({ params, searchParams }: Props
                     <li key={it.id} id={`pauta-${it.id}`} className="scroll-mt-4 border-b border-line last:border-0">
                       <details open={sp.pauta === it.id}>
                         <summary className="flex cursor-pointer list-none items-start gap-4 px-4 py-3 hover:bg-brand-soft">
-                          <span className="w-16 shrink-0 text-body font-semibold tabular">{it.scheduled_on ? formatDay(it.scheduled_on) : "Sem data"}</span>
+                          <span className="w-20 shrink-0 text-body font-semibold whitespace-nowrap tabular">{it.scheduled_on ? formatDay(it.scheduled_on) : "Sem data"}</span>
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold">{it.title}</span>
                             <span className="block text-caption text-ink-subtle">
@@ -250,7 +250,7 @@ export default async function CalendarioBasePage({ params, searchParams }: Props
 function Quota({ value, target }: { value: number; target: number | undefined }) {
   const short = target !== undefined && value < target;
   return (
-    <td className={`px-4 py-2 tabular ${short ? "text-warning" : ""}`}>
+    <td className={`px-4 py-2 whitespace-nowrap tabular ${short ? "text-warning" : ""}`}>
       {value}{target !== undefined && <span className="text-ink-subtle"> / {target}</span>}
     </td>
   );
