@@ -24,6 +24,7 @@ transparência total e inteligência de rede.
 | 5 | **Equipe** | `/mesa/equipe` | Custo/hora e capacidade (só admin edita; cliente nunca vê). |
 | 6 | **Parceiros (marca)** | `/[tenant]/parceiros` | Brief padronizado (IA opcional), publicação com retrato da marca, convite, propostas, aceite, entrega, aprovação, pagamento e avaliação; comissão da plataforma (15% padrão). |
 | 6 | **Portal do parceiro** | `/parceiro` | Freelancer vê só briefs abertos/atribuídos a ele, manda proposta e entrega (`deliver_brief`). Nunca acessa dados do tenant. |
+| 7 | **Postagem e impulso** | na peça + `/[tenant]/postagem` (Hub) | Etapas 5 e 6 do ciclo. Peça aprovada: "a NEST posta por mim" (dia, hora, onde, legenda). Peça publicada: "impulsionar" (verba, dias, objetivo, público). A Hub executa pela fila; postagem concluída marca a peça como publicada com o link; impulso real encerrado vira resultado. Modos por marca (`publishing_mode`): **manual** (Hub faz no Business Suite e registra), **teste** (simulação completa, sem conta real; números não entram em Resultados), **meta** (API). Tabela `piece_services`; loja só pede e cancela (`guard_piece_service`). |
 | 6 | **Curadoria** | `/mesa/parceiros` (admin) | Convite do parceiro (link de acesso), verificar/suspender. |
 
 ## Para ligar
@@ -31,10 +32,15 @@ transparência total e inteligência de rede.
 1. **IA**: `AI_GATEWAY_API_KEY` no `.env.local` e nas variáveis da Vercel. A IA já está ligada para a Mahogany em `ai_settings`; sem a chave, as telas avisam e seguem no modo manual.
 2. **Convites** (equipe e parceiros): `SUPABASE_SECRET_KEY` no servidor.
 3. **Integrações** (Meta, Google Business, TikTok, ERP): a tabela `integrations` e a tela já existem; falta o OAuth de cada plataforma e um job de sincronização gravando em `result_entries`/`operation_sales` com `source = 'integracao'`.
-4. **Pagamento dos parceiros**: status `pago` é manual; o meio de pagamento entra no mesmo ponto.
-5. **Supabase › Auth**: ligar a proteção contra senhas vazadas (aviso do advisor).
+4. **Meta (postar e impulsionar de verdade)**: conta Business/Instagram profissional de cada loja + app Meta com `instagram_content_publish` e `ads_management`. Ao conectar, a integração `meta` da marca vai para `conectado` e os pedidos passam a usar o executor `meta` (hoje bloqueado com aviso em `src/app/[tenant]/postagem/actions.ts`). Até lá: modo teste ou manual.
+5. **Pagamento dos parceiros**: status `pago` é manual; o meio de pagamento entra no mesmo ponto.
+6. **Supabase › Auth**: ligar a proteção contra senhas vazadas (aviso do advisor).
 
 ## Testes de permissão (RLS)
 
 Cada arquivo em `supabase/tests/` simula perfis dentro de uma transação que termina em `RAISE` (nada fica no banco) e traz o resultado esperado no cabeçalho:
-`rls_probe.sql` (base), `projects_probe.sql`, `brand_ai_probe.sql`, `assets_probe.sql`, `results_probe.sql`, `staff_probe.sql`, `partners_probe.sql`.
+`rls_probe.sql` (base), `projects_probe.sql`, `brand_ai_probe.sql`, `assets_probe.sql`, `results_probe.sql`, `staff_probe.sql`, `partners_probe.sql`, `postagem_probe.sql`.
+
+## Navegação (30/09/2026)
+
+Menu curto seguindo o ciclo: **Início · Lojas · Plano · Conteúdo · Resultados · Marca** (franqueado: Minha loja…). Cada lugar agrupa telas em abas (pílulas no topo); subdivisões de uma tela usam o seletor segmentado (`src/components/sub-tabs.tsx`). Busca ⌘K, configurações no menu da conta e seletor de espaço (Minha mesa ↔ marcas) no topo da barra: tudo em `src/components/shell/` (mapa em `nav.ts`). A loja abre em **Esta semana** (próximo passo em destaque). "Sala de controle" virou **Início**; "Rede", **Lojas**.

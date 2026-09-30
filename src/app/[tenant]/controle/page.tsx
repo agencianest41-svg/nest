@@ -46,6 +46,12 @@ export default async function ControlePage({ params, searchParams }: Props) {
       .eq("tenant_id", ctx.tenant.id).neq("status", "publicado").gte("scheduled_on", today).lte("scheduled_on", in7).order("scheduled_on").limit(20),
     contractSummary(supabase, ctx.tenant.id, month),
   ]);
+  // Pedidos de postagem/impulsionamento esperando a Hub.
+  const { data: requestRows } = ctx.isManager
+    ? await supabase.from("piece_services").select("id, kind, title, created_at, operations(name)")
+        .eq("tenant_id", ctx.tenant.id).eq("status", "solicitado").order("created_at").limit(20)
+    : { data: [] };
+  const requests = (requestRows ?? []) as unknown as { id: string; kind: "agendar" | "impulsionar"; title: string | null; operations: { name: string } | null }[];
 
   const tasks = (openTasks ?? []) as TaskRow[];
   const projectList = (projects ?? []) as Project[];
@@ -69,7 +75,7 @@ export default async function ControlePage({ params, searchParams }: Props) {
   const soon = tasks.filter((t) => t.due_on && t.due_on >= today && t.due_on <= in7);
   const pieces = (waitingPieces ?? []) as unknown as WaitingPiece[];
   const upcoming = (upcomingPieces ?? []) as unknown as (WaitingPiece & { status: string })[];
-  const waitingCount = toApprove.length + pieces.length + mine.length + myRoleOpen.length;
+  const waitingCount = toApprove.length + pieces.length + mine.length + myRoleOpen.length + requests.length;
 
   const people = await loadProfiles(supabase, [...(activity ?? []).map((a) => a.actor_id), ...tasks.map((t) => t.assignee_id)]);
   const pieceHref = (p: WaitingPiece) => p.monthly_plans
@@ -86,8 +92,7 @@ export default async function ControlePage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">{ctx.tenant.name}</p>
-          <h1 className="font-display text-page">Sala de controle</h1>
+          <h1 className="font-display text-page">Início</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">O que está andando, o que depende de você e o que já foi entregue.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -126,6 +131,11 @@ export default async function ControlePage({ params, searchParams }: Props) {
                   <Row key={p.id} href={pieceHref(p)} title={p.title}
                     meta={`Aprovar peça · ${ITEM_FORMAT[p.format]} · ${p.monthly_plans?.operations?.name ?? ""}`} due={p.scheduled_on} today={today}
                     badge={<StatusBadge label="Aprovar peça" tone="warning" />} />
+                ))}
+                {requests.map((r) => (
+                  <Row key={r.id} href={`/${tenant}/postagem`} title={r.title ?? "Peça"}
+                    meta={`${r.kind === "agendar" ? "Postar pela NEST" : "Impulsionar"} · ${r.operations?.name ?? ""}`} due={null} today={today}
+                    badge={<StatusBadge label={r.kind === "agendar" ? "Agendar" : "Impulsionar"} tone="warning" />} />
                 ))}
                 {[...mine, ...myRoleOpen].map((t) => (
                   <Row key={t.id} href={`/${tenant}/projetos/${t.project_id}`} title={t.title}

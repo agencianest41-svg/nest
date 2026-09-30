@@ -62,8 +62,7 @@ export default async function IaPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Configuração · equipe Hub</p>
-          <h1 className="font-display text-page">Inteligência artificial</h1>
+          <h1 className="font-display text-page">IA</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">
             Cada função de IA liga por marca, usa as instruções abaixo mais o Brand OS, e tem custo registrado. Sem IA, todas as telas continuam funcionando no modo manual.
           </p>

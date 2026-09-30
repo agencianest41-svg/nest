@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Globe2, Lightbulb, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantContext } from "@/lib/tenant";
@@ -10,6 +9,7 @@ import { Field } from "@/components/field";
 import { StatusBadge } from "@/components/status-badge";
 import { btnGhost, btnPrimary, btnSecondary, card, input, textarea } from "@/components/ui";
 import { deletePractice, replicatePractice, savePractice } from "./actions";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ aba?: string; q?: string; erro?: string }> };
 
@@ -40,22 +40,14 @@ export default async function BibliotecaPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <p className="label text-ink-subtle">Inteligência</p>
-        <h1 className="font-display text-page">Biblioteca de melhores práticas</h1>
+        <h1 className="font-display text-page">Biblioteca</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">
           O que funcionou vira método: cada case diz o que foi feito, por que funcionou (com números) e como outra loja repete.
         </p>
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}
 
-      <nav className="mt-6 flex gap-1 border-b border-line" aria-label="Origem">
-        {[{ key: "marca", label: `Da ${ctx.tenant.name}`, icon: Lightbulb }, { key: "rede", label: "Rede NEST", icon: Globe2 }].map((t) => (
-          <Link key={t.key} href={`/${tenant}/biblioteca?aba=${t.key}`} aria-current={aba === t.key ? "page" : undefined}
-            className={`-mb-px inline-flex items-center gap-1 border-b-2 px-3 py-2 text-body font-semibold ${aba === t.key ? "border-brand text-brand" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            <t.icon className="size-4" aria-hidden /> {t.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Origem" active={aba} tabs={[{ key: "marca", label: <><Lightbulb className="size-4" aria-hidden /> Da {ctx.tenant.name}</> }, { key: "rede", label: <><Globe2 className="size-4" aria-hidden /> Rede NEST</> }].map((t) => ({ ...t, href: `/${tenant}/biblioteca?aba=${t.key}` }))} />
       {isNetwork && (
         <p className="mt-3 text-caption text-ink-subtle">Cases que outras marcas da NEST escolheram compartilhar, sem nome de marca, loja ou cidade.</p>
       )}

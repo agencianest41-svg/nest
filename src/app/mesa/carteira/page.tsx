@@ -54,7 +54,6 @@ export default async function CarteiraPage({ searchParams }: Props) {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Equipe Hub · interno</p>
           <h1 className="font-display text-page">Carteira</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">Quanto cada cliente paga, quanto custa atender (horas × custo/hora + IA) e se o escopo contratado está sendo entregue.</p>
         </div>

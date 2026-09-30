@@ -13,6 +13,7 @@ import { btnGhost, btnSecondary, card, input } from "@/components/ui";
 import { importCsv, monthInsights, promoteToPractice, requestIntegration, saveSales } from "./actions";
 import { ImportForm } from "./import-form";
 import { InsightsPanel } from "./insights-panel";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ mes?: string; aba?: string; erro?: string }> };
 
@@ -74,7 +75,6 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Inteligência</p>
           <h1 className="font-display text-page">Resultados</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">Alcance, interações, leads e vendas por loja e por peça, e a posição de cada operação na rede.</p>
         </div>
@@ -82,14 +82,7 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}
 
-      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-line" aria-label="Seções">
-        {tabs.map((x) => (
-          <Link key={x.key} href={`/${tenant}/resultados?mes=${month.key}&aba=${x.key}`} aria-current={aba === x.key ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-body font-semibold whitespace-nowrap ${aba === x.key ? "border-brand text-brand" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            {x.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Seções" active={aba} tabs={tabs.map((x) => ({ ...x, href: `/${tenant}/resultados?mes=${month.key}&aba=${x.key}` }))} />
 
       {aba === "visao" && (
         <div className="mt-6 space-y-6">

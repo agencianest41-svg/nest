@@ -23,6 +23,8 @@ type Props = {
   editor: React.ReactNode;
   results: React.ReactNode;
   conversation: React.ReactNode;
+  /** Postagem pela NEST e impulsionamento (etapas 5 e 6). */
+  services?: React.ReactNode;
 };
 
 const STEPS: { label: string; statuses: ItemStatus[] }[] = [
@@ -34,7 +36,7 @@ const STEPS: { label: string; statuses: ItemStatus[] }[] = [
 
 // Painel da pauta no calendário: o franqueado lê o cérebro (ideia, por quê,
 // gancho, roteiro) e segue o próximo passo; a edição completa fica recolhida.
-export function PautaPanel({ item, slug, closeHref, editoria, eventTitle, kit, practice, isManager, advance, error, editor, results, conversation }: Props) {
+export function PautaPanel({ item, slug, closeHref, editoria, eventTitle, kit, practice, isManager, advance, error, editor, results, conversation, services }: Props) {
   const Icon = FORMAT_ICON[item.format];
   const stepIndex = STEPS.findIndex((s) => s.statuses.includes(item.status));
   const act = advance(item.status);
@@ -84,6 +86,7 @@ export function PautaPanel({ item, slug, closeHref, editoria, eventTitle, kit, p
             )}
 
             <NextStep item={item} isManager={isManager} action={act} />
+            {services}
 
             {item.idea && <Block title="A ideia">{item.idea}</Block>}
             {item.rationale && <Block title="Por que postar">{item.rationale}</Block>}

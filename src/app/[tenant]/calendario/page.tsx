@@ -37,8 +37,7 @@ export default async function CalendarioPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Direção local</p>
-          <h1 className="font-display text-page">Calendário</h1>
+          <h1 className="font-display text-page">Calendário da rede</h1>
         </div>
         <MonthPicker month={month} basePath={`/${tenant}/calendario`} />
       </header>

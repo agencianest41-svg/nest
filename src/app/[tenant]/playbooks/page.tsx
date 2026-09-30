@@ -42,7 +42,6 @@ export default async function PlaybooksPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <p className="label text-ink-subtle">Processos</p>
         <h1 className="font-display text-page">Playbooks</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">
           Um playbook é o processo escrito: quem faz cada etapa, em quantos dias, e quem aprova. Todo projeto começa de um.

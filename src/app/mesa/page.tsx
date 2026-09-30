@@ -61,7 +61,6 @@ export default async function MesaPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="label text-ink-subtle">Todas as marcas</p>
         <h1 className="font-display text-page">Minha mesa</h1>
         <p className="mt-1 text-body text-ink-muted">
           {mine.length} etapas com você · {toApprove.length} aguardando sua aprovação{ctx.isStaff && ` · ${formatMinutes(hoursWeek)} lançadas nesta semana`}

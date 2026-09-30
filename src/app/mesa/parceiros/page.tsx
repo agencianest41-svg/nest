@@ -26,7 +26,6 @@ export default async function ParceirosAdminPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="label text-ink-subtle">Admin NEST</p>
         <h1 className="font-display text-page">Bancada de parceiros</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">Quem entra na bancada passa pela NEST. Só parceiros verificados veem briefs e aparecem para as marcas.</p>
       </header>

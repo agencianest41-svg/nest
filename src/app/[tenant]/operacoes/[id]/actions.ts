@@ -13,13 +13,13 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
 const HTTPS = /^https:\/\/\S+$/;
 
-type Ref = { slug: string; operationId: string; month: string; vista?: "lista" };
+type Ref = { slug: string; operationId: string; month: string; vista?: "lista" | "calendario" };
 
 // ?peca= mantém aberta a pauta que acabou de ser salva (painel no calendário,
 // item rolado na lista).
 function back({ slug, operationId, month, vista }: Ref, erro?: string, itemId?: string) {
   return `/${slug}/operacoes/${operationId}?mes=${month}${vista ? `&vista=${vista}` : ""}${erro ? `&erro=${erro}` : ""}` +
-    `${itemId ? `&peca=${itemId}${vista ? `#peca-${itemId}` : ""}` : ""}`;
+    `${itemId ? `&peca=${itemId}${vista === "lista" ? `#peca-${itemId}` : ""}` : ""}`;
 }
 
 const opt = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim() || null;
@@ -184,4 +184,76 @@ export async function addLocalEvent(ref: Ref, formData: FormData) {
   });
   if (error) redirect(back(ref, "salvar"));
   done(ref);
+}
+
+// ---------------------------------------------------------------------------
+// Postagem e impulsionamento: a loja pede, a Hub executa (fila em /postagem).
+// ---------------------------------------------------------------------------
+const TIME = /^\d{2}:\d{2}$/;
+const PLACEMENTS = ["feed", "reels", "stories"];
+const OBJECTIVES = ["alcance", "perfil", "mensagens", "visitas_loja"];
+
+function serviceError(message: string) {
+  if (message.includes("aprovadas")) return "pedido_aprovada";
+  if (message.includes("publicadas")) return "pedido_publicada";
+  if (message.includes("piece_services_one_active") || message.includes("duplicate")) return "pedido_duplicado";
+  return "salvar";
+}
+
+export async function requestSchedule(ref: Ref, itemId: string, formData: FormData) {
+  const date = String(formData.get("date") ?? "");
+  const time = String(formData.get("time") ?? "");
+  const placement = String(formData.get("placement") ?? "");
+  if (!DATE.test(date) || !TIME.test(time) || !PLACEMENTS.includes(placement)) redirect(back(ref, "dados", itemId));
+  // Horário de Brasília (sem horário de verão desde 2019).
+  const scheduledAt = new Date(`${date}T${time}:00-03:00`);
+  if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() + 10 * 60_000) redirect(back(ref, "pedido_data", itemId));
+
+  const ctx = await getTenantContext(ref.slug);
+  const supabase = await createClient();
+  const { error } = await supabase.from("piece_services").insert({
+    tenant_id: ctx.tenant.id,
+    operation_id: ref.operationId,
+    plan_item_id: itemId,
+    kind: "agendar",
+    scheduled_at: scheduledAt.toISOString(),
+    placement,
+    caption: opt(formData, "caption"),
+    notes: opt(formData, "notes"),
+  });
+  if (error) redirect(back(ref, serviceError(error.message), itemId));
+  done(ref, itemId);
+}
+
+export async function requestBoost(ref: Ref, itemId: string, formData: FormData) {
+  const budget = Number(String(formData.get("budget") ?? "").replace(",", "."));
+  const days = Number(formData.get("days"));
+  const objective = String(formData.get("objective") ?? "");
+  if (!(budget >= 5 && budget <= 50000) || !(Number.isInteger(days) && days >= 1 && days <= 30) || !OBJECTIVES.includes(objective)) {
+    redirect(back(ref, "dados", itemId));
+  }
+  const ctx = await getTenantContext(ref.slug);
+  const supabase = await createClient();
+  const { error } = await supabase.from("piece_services").insert({
+    tenant_id: ctx.tenant.id,
+    operation_id: ref.operationId,
+    plan_item_id: itemId,
+    kind: "impulsionar",
+    budget,
+    days,
+    objective,
+    audience: opt(formData, "audience"),
+    notes: opt(formData, "notes"),
+  });
+  if (error) redirect(back(ref, serviceError(error.message), itemId));
+  done(ref, itemId);
+}
+
+export async function cancelRequest(ref: Ref, itemId: string, serviceId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("piece_services").update({ status: "cancelado" })
+    .eq("id", serviceId).eq("status", "solicitado").select("id");
+  if (error) redirect(back(ref, "salvar", itemId));
+  if (!data?.length) redirect(back(ref, "mudou", itemId));
+  done(ref, itemId);
 }

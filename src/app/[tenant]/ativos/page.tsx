@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { btnPrimary, btnSecondary, card, input, textarea } from "@/components/ui";
 import { createAsset, createKit, reuseAsset } from "./actions";
 import { AssetForm } from "./asset-form";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ aba?: string; tipo?: string; q?: string; erro?: string }> };
 
@@ -62,8 +63,7 @@ export default async function AtivosPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <p className="label text-ink-subtle">Ativação</p>
-        <h1 className="font-display text-page">Kits & Ativos</h1>
+        <h1 className="font-display text-page">Kits & ativos</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">
           Peças oficiais, textos prontos para Grupos VIP e o que cada loja produziu, com origem e direitos de uso rastreados.
         </p>
@@ -84,14 +84,7 @@ export default async function AtivosPage({ params, searchParams }: Props) {
         </section>
       )}
 
-      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-line" aria-label="Seções">
-        {tabs.map((t) => (
-          <Link key={t.key} href={`/${tenant}/ativos?aba=${t.key}`} aria-current={aba === t.key ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-body font-semibold whitespace-nowrap ${aba === t.key ? "border-brand text-brand" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Seções" active={aba} tabs={tabs.map((t) => ({ ...t, href: `/${tenant}/ativos?aba=${t.key}` }))} />
 
       {aba === "kits" ? (
         <div className={`mt-6 grid items-start gap-6 ${ctx.isManager ? "lg:grid-cols-[1fr_320px]" : ""}`}>

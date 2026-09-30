@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { card } from "@/components/ui";
 import { createBrief, draftBrief } from "./actions";
 import { BriefForm } from "./brief-form";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ aba?: string; task?: string; erro?: string }> };
 
@@ -35,7 +36,6 @@ export default async function ParceirosPage({ params, searchParams }: Props) {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <p className="label text-ink-subtle">Bancada NEST</p>
         <h1 className="font-display text-page">Parceiros</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">
           Freelancers verificados pela NEST para absorver demanda: brief padronizado com a marca, proposta, entrega, aprovação e avaliação no mesmo lugar.
@@ -49,14 +49,7 @@ export default async function ParceirosPage({ params, searchParams }: Props) {
         <div className={`${card} p-4`}><dt className="label text-ink-muted">Investido (aprovados)</dt><dd className="mt-1 text-metric font-semibold tabular">{formatBRL(spend)}</dd></div>
       </dl>
 
-      <nav className="mt-6 flex gap-1 border-b border-line" aria-label="Seções">
-        {[{ key: "briefs", label: "Briefs" }, { key: "bancada", label: "Bancada" }].map((t) => (
-          <Link key={t.key} href={`/${tenant}/parceiros?aba=${t.key}`} aria-current={aba === t.key ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-body font-semibold ${aba === t.key ? "border-brand text-brand" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Seções" active={aba} tabs={[{ key: "briefs", label: "Briefs" }, { key: "bancada", label: "Bancada" }].map((t) => ({ ...t, href: `/${tenant}/parceiros?aba=${t.key}` }))} />
 
       {aba === "bancada" ? (
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -18,13 +18,17 @@ import { MonthPicker } from "@/components/month-picker";
 import { StatusBadge } from "@/components/status-badge";
 import { btnGhost, btnPrimary, btnSecondary, card, input, textarea } from "@/components/ui";
 import { Progress } from "@/components/progress";
-import { addItem, addLocalEvent, advanceItem, createPlan, deleteItem, setTier, updateItem, updatePlan } from "./actions";
+import { addItem, addLocalEvent, advanceItem, cancelRequest, createPlan, deleteItem, requestBoost, requestSchedule, setTier, updateItem, updatePlan } from "./actions";
 import { draftPlanItem, suggestPlanIdeas } from "./studio-actions";
 import { ItemEditor, type Option } from "./item-editor";
 import { MonthCalendar, UpNext } from "./month-calendar";
 import { PautaPanel } from "./pauta-panel";
+import { WeekView } from "./week-view";
+import { ServicesPanel } from "./services-panel";
+import type { PieceService, PublishingMode } from "@/lib/publishing";
 import { checkBrandText } from "../../marca/check-action";
 import { StudioPanel } from "./studio-panel";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = {
   params: Promise<{ tenant: string; id: string }>;
@@ -41,11 +45,17 @@ const ERRORS: Record<string, string> = {
   cerebro: "Editoria, funil, o porquê e pautas sensíveis são definidos pela Hub ou pela Marca.",
   link: "Cole o link do post publicado (começando com https://).",
   mudou: "A pauta mudou de etapa enquanto você olhava. Confira e tente de novo.",
+  pedido_data: "Escolha um dia e hora a partir de agora (com pelo menos 10 minutos de folga).",
+  pedido_aprovada: "Só peças aprovadas podem ser agendadas pela NEST.",
+  pedido_publicada: "Só peças publicadas podem ser impulsionadas.",
+  pedido_duplicado: "Já existe um pedido desse tipo em andamento para esta peça.",
 };
 
 export default async function OperacaoPage({ params, searchParams }: Props) {
   const [{ tenant, id }, { mes, erro, peca, vista }] = await Promise.all([params, searchParams]);
-  const planning = vista === "lista";
+  // Visões da loja: "Esta semana" (padrão, próximo passo), calendário do mês e planejamento.
+  const view: "semana" | "lista" | "calendario" = vista === "lista" || vista === "calendario" ? vista : "semana";
+  const planning = view === "lista";
   const ctx = await getTenantContext(tenant);
   const month = resolveMonth(mes);
   const supabase = await createClient();
@@ -86,20 +96,27 @@ export default async function OperacaoPage({ params, searchParams }: Props) {
   const results = (resultRows ?? []) as ResultEntry[];
   const people = await loadProfiles(supabase, comments.map((c) => c.author_id));
 
-  const ref = { slug: tenant, operationId: id, month: month.key, ...(planning ? { vista: "lista" as const } : {}) };
+  const ref = { slug: tenant, operationId: id, month: month.key, ...(view !== "semana" ? { vista: view } : {}) };
   const editorias = (editoriaRows ?? []) as Editoria[];
   const kits: Option[] = (kitRows ?? []).map((k) => ({ id: k.id, label: k.title }));
   const practices: Option[] = (practiceRows ?? []).map((p) => ({ id: p.id, label: p.title }));
   const lookups = { editorias, kits, practices };
   const today = todayIso();
   const baseHref = `/${tenant}/operacoes/${id}?mes=${month.key}`;
-  const pautaHref = (itemId: string) => `${baseHref}&peca=${itemId}`;
+  const viewHref = view === "semana" ? baseHref : `${baseHref}&vista=${view}`;
+  const pautaHref = (itemId: string) => `${viewHref}&peca=${itemId}`;
   const monthEvents = (events ?? []) as CalendarEvent[];
   const eventTitle = new Map(monthEvents.map((e) => [e.id, e.title]));
   const planItems = (items ?? []) as PlanItem[];
   const statusOptions = ITEM_STATUS_ORDER;
   const progress = quotaProgress(planItems, (quota ?? null) as TierQuota | null);
   const selected = !planning && peca ? planItems.find((i) => i.id === peca) : undefined;
+  const [{ data: serviceRows }, { data: modeRow }] = selected
+    ? await Promise.all([
+        supabase.from("piece_services").select("*").eq("plan_item_id", selected.id).order("created_at", { ascending: false }),
+        supabase.rpc("publishing_mode", { p_tenant: ctx.tenant.id }),
+      ])
+    : [{ data: [] }, { data: null }];
   const editorForPanel = (item: PlanItem) => (
     <ItemEditor
       item={item}
@@ -117,7 +134,7 @@ export default async function OperacaoPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       {ctx.isManager || ctx.memberships.some((m) => m.role === "regional") ? (
         <Link href={`/${tenant}?mes=${month.key}`} className={`${btnGhost} -ml-2`}>
-          <ArrowLeft className="size-4" aria-hidden /> Rede
+          <ArrowLeft className="size-4" aria-hidden /> Lojas
         </Link>
       ) : null}
 
@@ -146,21 +163,34 @@ export default async function OperacaoPage({ params, searchParams }: Props) {
         </div>
       </header>
 
-      <nav className="mt-6 flex gap-1 border-b border-line" aria-label="Visão do mês">
-        {[{ key: "calendario", label: "Calendário", href: baseHref, active: !planning },
-          { key: "lista", label: "Planejamento", href: `${baseHref}&vista=lista`, active: planning }].map((t) => (
-          <Link key={t.key} href={t.href} aria-current={t.active ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-body font-semibold ${t.active ? "border-ink text-ink" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Visão do mês" active={view} tabs={[{ key: "semana", label: "Esta semana", href: baseHref }, { key: "calendario", label: "Calendário", href: `${baseHref}&vista=calendario` }, { key: "lista", label: "Planejamento", href: `${baseHref}&vista=lista` }]} />
 
       {erro && ERRORS[erro] && !selected && (
         <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>
       )}
 
-      {!planning && (
+      {view === "semana" && (
+        !plan && ctx.isManager ? (
+          <EmptyPlan label={month.label} action={createPlan.bind(null, ref)} />
+        ) : (
+          <WeekView
+            items={planItems}
+            today={today}
+            monthFirst={month.first}
+            monthLast={month.last}
+            monthLabel={month.label}
+            isManager={ctx.isManager}
+            published={progress.posts.published + progress.stories.published}
+            target={progress.posts.target !== null || progress.stories.target !== null
+              ? (progress.posts.target ?? 0) + (progress.stories.target ?? 0) : null}
+            hrefFor={pautaHref}
+            calendarHref={`${baseHref}&vista=calendario`}
+            planningHref={`${baseHref}&vista=lista`}
+          />
+        )
+      )}
+
+      {view === "calendario" && (
         !plan ? (
           <EmptyPlan label={month.label} action={createPlan.bind(null, ref)} />
         ) : (
@@ -192,7 +222,7 @@ export default async function OperacaoPage({ params, searchParams }: Props) {
         <PautaPanel
           item={selected}
           slug={tenant}
-          closeHref={baseHref}
+          closeHref={viewHref}
           editoria={editorias.find((e) => e.id === selected.editoria_id)}
           eventTitle={selected.calendar_event_id ? eventTitle.get(selected.calendar_event_id) : undefined}
           kit={kits.filter((k) => k.id === selected.kit_id).map((k) => ({ id: k.id, title: k.label }))[0]}
@@ -201,6 +231,16 @@ export default async function OperacaoPage({ params, searchParams }: Props) {
           advance={(from) => advanceItem.bind(null, ref, selected.id, from)}
           error={erro ? ERRORS[erro] : undefined}
           editor={editorForPanel(selected)}
+          services={
+            <ServicesPanel
+              item={selected}
+              services={(serviceRows ?? []) as PieceService[]}
+              mode={(modeRow ?? "manual") as PublishingMode}
+              schedule={requestSchedule.bind(null, ref, selected.id)}
+              boost={requestBoost.bind(null, ref, selected.id)}
+              cancel={(sid) => cancelRequest.bind(null, ref, selected.id, sid)}
+            />
+          }
           results={
             <ItemResults
               item={selected}

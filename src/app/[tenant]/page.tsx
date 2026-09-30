@@ -69,8 +69,7 @@ export default async function RedePage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Last Mile</p>
-          <h1 className="font-display text-page">Rede {ctx.tenant.name}</h1>
+          <h1 className="font-display text-page">Lojas</h1>
         </div>
         <MonthPicker month={month} basePath={`/${tenant}`} />
       </header>

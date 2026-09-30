@@ -62,7 +62,6 @@ export default async function ProjetosPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Processos</p>
           <h1 className="font-display text-page">Projetos</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">
             Cada projeto nasce de um playbook: etapas, responsáveis, prazos e aprovações definidos antes de começar.

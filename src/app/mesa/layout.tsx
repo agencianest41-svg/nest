@@ -1,30 +1,27 @@
-import Link from "next/link";
-import { LogOut } from "lucide-react";
-import { signOut } from "@/app/login/actions";
+import { Suspense } from "react";
 import { getDeskContext } from "@/lib/staff";
-import { DeskNav } from "./nav";
+import { Sidebar } from "@/components/shell/sidebar";
+import { CommandPalette } from "@/components/shell/command-palette";
+import { loadWorkspaces } from "@/components/shell/workspaces";
+import type { NavInput } from "@/components/shell/nav";
 
-// Área da equipe que atravessa marcas: fila pessoal, carteira e equipe.
+// Minha mesa: o espaço que atravessa marcas (fila pessoal, carteira e equipe),
+// com a mesma barra lateral das marcas e o seletor de espaço no topo.
 export default async function MesaLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getDeskContext();
-  const links = [
-    { href: "/mesa", label: "Minha mesa" },
-    ...(ctx.isStaff ? [{ href: "/mesa/carteira", label: "Carteira" }, { href: "/mesa/equipe", label: "Equipe" }] : []),
-    ...(ctx.isAdmin ? [{ href: "/mesa/parceiros", label: "Parceiros" }] : []),
-  ];
+  const { workspaces } = await loadWorkspaces(ctx.userId);
+  const nav: NavInput = { kind: "mesa", isStaff: ctx.isStaff, isAdmin: ctx.isAdmin };
+  const roleLabel = ctx.isAdmin ? "Admin NEST" : ctx.isStaff ? "Equipe Hub" : "Todas as marcas";
+
   return (
-    <div className="min-h-dvh">
-      <header className="border-b border-line bg-surface print:hidden">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4">
-          <Link href="/mesa" className="label text-ink">NEST</Link>
-          <DeskNav links={links} />
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-caption text-ink-subtle sm:inline">{ctx.email}</span>
-            <form action={signOut}><button className="inline-flex items-center gap-1 text-caption font-semibold text-ink-muted hover:text-ink"><LogOut className="size-3.5" aria-hidden /> Sair</button></form>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+    <div className="md:flex">
+      <Suspense>
+        <Sidebar nav={nav} title="Minha mesa" roleLabel={roleLabel} email={ctx.email} workspaces={workspaces} canDesk />
+        <CommandPalette nav={nav} workspaces={workspaces} canDesk />
+      </Suspense>
+      <main className="min-w-0 flex-1 px-4 py-6 md:px-10 md:py-8">
+        <div className="mx-auto max-w-6xl">{children}</div>
+      </main>
     </div>
   );
 }

@@ -22,8 +22,7 @@ export default async function EquipePage({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-6">
       <header>
-        <p className="label text-ink-subtle">Equipe Hub · interno</p>
-        <h1 className="font-display text-page">Equipe</h1>
+        <h1 className="font-display text-page">Equipe Hub</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">Custo/hora e capacidade semanal de cada pessoa: base da carga da equipe e da margem por cliente. Clientes nunca veem esses dados.</p>
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}

@@ -43,7 +43,6 @@ export default async function EquipePage({ params }: Props) {
   return (
     <div className="mx-auto max-w-6xl">
       <header>
-        <p className="label text-ink-subtle">Acessos</p>
         <h1 className="font-display text-page">Equipe</h1>
         <p className="mt-1 max-w-2xl text-body text-ink-muted">
           Quem acessa a rede {ctx.tenant.name} e o que cada pessoa enxerga. Lojista vê só a própria operação;

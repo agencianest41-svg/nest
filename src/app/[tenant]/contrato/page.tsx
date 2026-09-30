@@ -48,8 +48,7 @@ export default async function ContratoPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Transparência</p>
-          <h1 className="font-display text-page">Contrato vivo</h1>
+          <h1 className="font-display text-page">Contrato</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">
             O que foi contratado para cada mês e quanto já foi entregue. Peças contam quando publicadas; linhas sem formato contam etapas de projeto concluídas.
           </p>

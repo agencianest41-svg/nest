@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Ban, AlertTriangle, CheckCircle2, Plus, Trash2, XCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantContext } from "@/lib/tenant";
@@ -11,6 +10,7 @@ import { btnGhost, btnPrimary, btnSecondary, card, input, textarea } from "@/com
 import { addEditoria, addExample, addPersona, addProduct, addRule, removeBrandRow, saveTheme, saveVoice, toggleEditoria, toggleProduct } from "./actions";
 import { checkBrandText } from "./check-action";
 import { BrandTester } from "./brand-tester";
+import { SubTabs } from "@/components/sub-tabs";
 
 type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ aba?: string; erro?: string }> };
 
@@ -64,8 +64,7 @@ export default async function MarcaPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="label text-ink-subtle">Brand OS</p>
-          <h1 className="font-display text-page">Marca {ctx.tenant.name}</h1>
+          <h1 className="font-display text-page">Guia da marca</h1>
           <p className="mt-1 max-w-2xl text-body text-ink-muted">
             Tudo o que a equipe, os parceiros e a IA precisam saber para falar como a marca. O que está aqui alimenta o Estúdio e o guardião de marca.
           </p>
@@ -77,14 +76,7 @@ export default async function MarcaPage({ params, searchParams }: Props) {
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}
 
-      <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-line" aria-label="Seções da marca">
-        {TABS.map((t) => (
-          <Link key={t.key} href={`/${tenant}/marca?aba=${t.key}`} aria-current={tab === t.key ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-2 text-body font-semibold whitespace-nowrap ${tab === t.key ? "border-brand text-brand" : "border-transparent text-ink-muted hover:text-ink"}`}>
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <SubTabs className="mt-6" label="Seções da marca" active={tab} tabs={TABS.map((t) => ({ ...t, href: `/${tenant}/marca?aba=${t.key}` }))} />
 
       <div className="mt-6">
         {tab === "identidade" && (
