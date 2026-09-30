@@ -56,7 +56,13 @@ Guardião de marca · Kits & ativos · resultado por peça · Biblioteca com "Re
 - [x] **Fase 2 (29/09/2026)**: página da operação abre no **Calendário** (grade do mês; agenda no celular; campanhas longas na faixa "No mês"),
   "Entrega do mês" (posts/stories × meta do pacote), "Próximas pautas" e painel da pauta (modo criar: ideia, porquê, gancho, roteiro e legenda
   com copiar, kit, case, próximo passo, publicar com link). A antiga lista virou a aba **Planejamento**.
-- [ ] Fases 3 a 5
+- [x] **Fase 3 (30/09/2026)**: `network_plans` / `network_plan_items` (só Hub e Marca leem), aba **Plano › Calendário-base**
+  (abre em M+1). "Gerar com IA" (`base.gerar`) monta ideia, porquê, gancho, funil, editoria e campanha, e define o **pacote mínimo**
+  de cada pauta até fechar o volume de cada pacote; a tabela mostra posts/stories × cota e lojas por pacote. Pautas de preço/promoção
+  vêm marcadas como sensíveis. `release_network_plan` cria o plano do mês de cada loja (piloto; a rede toda se não houver piloto),
+  copia as pautas como origem `base` e corta posts/stories pela cota em ordem de data; lojas sem pacote recebem o Essencial.
+  Liberar de novo só envia o que é novo (`plan_items.base_item_id`). A adaptação à cidade fica no "escrever com IA" da loja.
+- [ ] Fases 4 e 5
 
 ## Em aberto
 

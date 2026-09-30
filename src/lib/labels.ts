@@ -1,4 +1,4 @@
-import type { EventKind, EventScope, FunnelStage, ItemFormat, ItemOrigin, ItemStatus, MemberRole, PlanStatus, ProjectStatus, ServiceTier, TaskStatus } from "./types";
+import type { EventKind, EventScope, FunnelStage, ItemFormat, ItemOrigin, ItemStatus, MemberRole, NetworkPlanStatus, PlanStatus, ProjectStatus, ServiceTier, TaskStatus } from "./types";
 
 export const ROLE_LABEL: Record<MemberRole, string> = {
   hub: "Estrategista Hub",
@@ -47,6 +47,14 @@ export const SERVICE_TIER: Record<ServiceTier, string> = {
   ativacao: "Ativação",
   inteligencia: "Inteligência",
 };
+
+export const NETWORK_PLAN_STATUS: Record<NetworkPlanStatus, { label: string; tone: Tone }> = {
+  rascunho: { label: "Rascunho", tone: "neutral" },
+  revisao: { label: "Em revisão", tone: "warning" },
+  liberado: { label: "Liberado para a rede", tone: "success" },
+};
+
+export const TIER_ORDER: ServiceTier[] = ["essencial", "acompanhamento", "ativacao", "inteligencia"];
 
 export const ITEM_ORIGIN: Record<ItemOrigin, string> = {
   manual: "Criada pela loja",

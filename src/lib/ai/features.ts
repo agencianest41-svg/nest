@@ -8,7 +8,8 @@ export type AiFeature =
   | "relatorio.resumo"
   | "resultado.insights"
   | "biblioteca.case"
-  | "brief.gerar";
+  | "brief.gerar"
+  | "base.gerar";
 
 export const AI_FEATURES: Record<AiFeature, { label: string; description: string; instructions: string }> = {
   "estudio.sugerir": {
@@ -75,6 +76,18 @@ export const AI_FEATURES: Record<AiFeature, { label: string; description: string
       "Escreva um brief claro para um profissional externo executar a entrega.",
       "Inclua objetivo, entregáveis (formatos e quantidades), referências da marca, o que evitar e critérios de aprovação.",
       "Seja específico e curto; o parceiro não conhece a marca.",
+    ].join("\n"),
+  },
+  "base.gerar": {
+    label: "Calendário-base · gerar mês",
+    description: "Gera o calendário-base da rede para o mês, a partir das campanhas, editorias, pacotes e cases.",
+    instructions: [
+      "Monte o calendário-base do mês para toda a rede de lojas: as pautas que cada loja vai criar e publicar.",
+      "Cada pauta é para qualquer loja da rede: nada de cidade, bairro ou nome de loja; a adaptação local vem depois.",
+      "Ancore as pautas nas campanhas e datas do calendário, distribua pelo mês (sem dois posts no mesmo dia) e respeite o peso de cada editoria.",
+      "min_tier indica o menor pacote que recebe a pauta: as mais importantes são essencial; as extras vão para os pacotes maiores, até fechar o volume de cada um.",
+      "why explica em uma frase por que a rede deve postar isso agora. Use os cases da Biblioteca como referência do que já funcionou.",
+      "sensitive = true quando a pauta fala de preço, promoção, condição comercial ou tema regulatório.",
     ].join("\n"),
   },
 };

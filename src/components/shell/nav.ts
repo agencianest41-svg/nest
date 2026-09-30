@@ -4,7 +4,8 @@ import {
 
 // Mapa único da navegação: poucos lugares no menu, seguindo o ciclo do mês
 // (planejar → criar → medir). Cada lugar agrupa suas telas em abas.
-export type NavTab = { href: string; label: string; keepMonth?: boolean; match?: string[] };
+/** exact: só a própria rota (quando outra aba mora em uma sub-rota dela). */
+export type NavTab = { href: string; label: string; keepMonth?: boolean; exact?: boolean; match?: string[] };
 export type NavSection = { key: string; label: string; icon: LucideIcon; tabs: NavTab[] };
 /** multiStore: pessoa sem gestão que vê mais de uma loja (ex.: regional). */
 export type NavFlags = { slug: string; isManager: boolean; isHub: boolean; multiStore?: boolean };
@@ -31,7 +32,8 @@ export function buildNav({ slug, isManager, isHub, multiStore }: NavFlags): NavS
     {
       key: "plano", label: "Plano", icon: CalendarDays,
       tabs: [
-        { href: `${base}/calendario`, label: "Calendário da rede", keepMonth: true },
+        { href: `${base}/calendario`, label: "Calendário da rede", keepMonth: true, exact: isManager },
+        ...on(isManager, { href: `${base}/calendario/base`, label: "Calendário-base" }),
         { href: `${base}/projetos`, label: "Projetos" },
         ...on(isManager, { href: `${base}/playbooks`, label: "Playbooks" }),
       ],
@@ -93,7 +95,7 @@ export function buildSettings({ slug, isManager }: NavFlags): NavTab[] {
 }
 
 export function tabMatches(tab: NavTab, pathname: string, base: string) {
-  const own = tab.href === base ? pathname === base : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+  const own = tab.href === base || tab.exact ? pathname === tab.href : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
   return own || (tab.match ?? []).some((m) => pathname.startsWith(m));
 }
 

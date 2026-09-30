@@ -8,6 +8,7 @@ export type ItemStatus = "ideia" | "roteiro" | "aprovacao" | "aprovado" | "publi
 export type FunnelStage = "descoberta" | "consideracao" | "conversao" | "relacionamento";
 export type ServiceTier = "essencial" | "acompanhamento" | "ativacao" | "inteligencia";
 export type ItemOrigin = "manual" | "ia" | "hub" | "base" | "banco";
+export type NetworkPlanStatus = "rascunho" | "revisao" | "liberado";
 
 export type Editoria = {
   id: string;
@@ -94,6 +95,36 @@ export type PlanItem = {
   sensitive: boolean;
   published_url: string | null;
   origin: ItemOrigin;
+  base_item_id?: string | null;
+};
+
+export type NetworkPlan = {
+  id: string;
+  month: string;
+  status: NetworkPlanStatus;
+  focus: string | null;
+  generated_at: string | null;
+  released_at: string | null;
+};
+
+export type NetworkPlanItem = {
+  id: string;
+  network_plan_id: string;
+  position: number;
+  title: string;
+  format: ItemFormat;
+  scheduled_on: string | null;
+  min_tier: ServiceTier;
+  calendar_event_id: string | null;
+  editoria_id: string | null;
+  funnel: FunnelStage | null;
+  idea: string | null;
+  rationale: string | null;
+  hook: string | null;
+  kit_id: string | null;
+  practice_id: string | null;
+  sensitive: boolean;
+  origin: "manual" | "ia";
 };
 
 export type ProjectStatus = "planejado" | "em_andamento" | "pausado" | "concluido" | "cancelado";
