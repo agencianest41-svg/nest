@@ -1,5 +1,5 @@
 import {
-  BarChart3, CalendarDays, FolderOpen, Handshake, Home, Inbox, Palette, Store, Users, Wallet, type LucideIcon,
+  BarChart3, Building2, CalendarDays, FolderOpen, Handshake, Home, Inbox, Palette, Store, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 
 // Mapa único da navegação: poucos lugares no menu, seguindo o ciclo do mês
@@ -67,7 +67,7 @@ export function buildDeskNav({ isStaff, isAdmin }: DeskFlags): NavSection[] {
   return [
     one("mesa", "Minha mesa", Inbox, "/mesa"),
     ...(isStaff ? [one("carteira", "Carteira", Wallet, "/mesa/carteira"), one("equipe", "Equipe Hub", Users, "/mesa/equipe")] : []),
-    ...(isAdmin ? [one("parceiros", "Parceiros", Handshake, "/mesa/parceiros")] : []),
+    ...(isAdmin ? [one("marcas", "Marcas", Building2, "/mesa/marcas"), one("parceiros", "Parceiros", Handshake, "/mesa/parceiros")] : []),
   ];
 }
 

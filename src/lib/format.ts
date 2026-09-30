@@ -23,3 +23,8 @@ const PCT = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDi
 export const formatBRL = (v: number) => BRL.format(v);
 export const formatInt = (v: number) => INT.format(v);
 export const formatPct = (v: number) => PCT.format(v);
+
+/** "Óticas Diniz" → "oticas-diniz" (endereço de marca). */
+export function slugify(v: string) {
+  return v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
