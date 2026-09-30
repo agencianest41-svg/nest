@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Award, Plug } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Award, Plug, RefreshCw, Unplug } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantContext } from "@/lib/tenant";
 import { formatDay, resolveMonth, shiftMonth } from "@/lib/month";
@@ -10,14 +10,30 @@ import { Field } from "@/components/field";
 import { MonthPicker } from "@/components/month-picker";
 import { StatusBadge } from "@/components/status-badge";
 import { btnGhost, btnSecondary, card, input } from "@/components/ui";
-import { importCsv, monthInsights, promoteToPractice, requestIntegration, saveSales } from "./actions";
+import { disconnectMeta, importCsv, monthInsights, promoteToPractice, requestIntegration, saveMetaAccounts, saveSales } from "./actions";
+import { daysUntilExpiry, metaMissing, type MetaConfig } from "@/lib/integrations/meta";
 import { ImportForm } from "./import-form";
 import { InsightsPanel } from "./insights-panel";
 import { SubTabs } from "@/components/sub-tabs";
 
-type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ mes?: string; aba?: string; erro?: string }> };
+type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ mes?: string; aba?: string; erro?: string; ok?: string }> };
 
-const ERRORS: Record<string, string> = { dados: "Confira os campos.", salvar: "Não foi possível salvar.", permissao: "Só Hub e Marca promovem cases." };
+const ERRORS: Record<string, string> = {
+  dados: "Confira os campos.", salvar: "Não foi possível salvar.", permissao: "Só Hub e Marca promovem cases.",
+  meta_permissao: "Só Hub e Marca conectam contas da Meta.",
+  meta_config: "O app da Meta ainda não está configurado no servidor da NEST.",
+  meta_estado: "O login com o Facebook expirou ou veio de outra aba. Tente conectar de novo.",
+  meta_negado: "A conexão foi cancelada no Facebook. Nada foi alterado.",
+  meta_falhou: "A Meta não confirmou a conexão. Tente de novo em alguns minutos.",
+  meta_repetida: "Cada loja só pode ficar com uma conta do Instagram.",
+};
+
+const OK: Record<string, string> = {
+  meta: "Conta da Meta conectada. Confira abaixo qual Instagram é de qual loja.",
+  meta_vazio: "Conectado, mas nenhuma conta do Instagram veio junto. Verifique se as contas são Profissionais e estão ligadas a uma página do Facebook, e se você marcou essas páginas na hora de autorizar.",
+  meta_contas: "Contas salvas.",
+  meta_desconectado: "Meta desconectada. O acesso da NEST foi removido.",
+};
 
 const PROVIDERS = [
   { key: "meta", label: "Instagram e Facebook (Meta)", hint: "Alcance, interações e mensagens de cada post, automaticamente." },
@@ -29,7 +45,7 @@ const PROVIDERS = [
 type Row = ResultEntry & { plan_items: { id: string; title: string; format: keyof typeof ITEM_FORMAT } | null };
 
 export default async function ResultadosPage({ params, searchParams }: Props) {
-  const [{ tenant }, { mes, aba = "visao", erro }] = await Promise.all([params, searchParams]);
+  const [{ tenant }, { mes, aba = "visao", erro, ok }] = await Promise.all([params, searchParams]);
   const ctx = await getTenantContext(tenant);
   const month = resolveMonth(mes);
   const prev = shiftMonth(month, -1);
@@ -42,7 +58,7 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
     supabase.from("operations").select("id, name, city").eq("tenant_id", ctx.tenant.id).eq("active", true).order("name"),
     supabase.from("operation_sales").select("operation_id, revenue, orders").eq("tenant_id", ctx.tenant.id).eq("month", month.first),
     supabase.from("operation_sales").select("operation_id, revenue").eq("tenant_id", ctx.tenant.id).eq("month", prev.first),
-    supabase.from("integrations").select("provider, operation_id, status").eq("tenant_id", ctx.tenant.id),
+    supabase.from("integrations").select("provider, operation_id, status, account_label, config").eq("tenant_id", ctx.tenant.id),
   ]);
   const results = (rows ?? []) as Row[];
   const benchmarks = (bench ?? []) as Benchmark[];
@@ -65,6 +81,15 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
     .sort((a, b) => b.t.leads - a.t.leads || b.t.engagement - a.t.engagement).slice(0, 8);
   const back = `/${tenant}/resultados?mes=${month.key}`;
 
+  // Meta: a linha da marca guarda a conexão; cada loja ligada tem a própria linha.
+  const metaRow = (integrations ?? []).find((i) => i.provider === "meta" && !i.operation_id);
+  const meta = (metaRow?.config ?? {}) as MetaConfig;
+  const metaOn = metaRow?.status === "conectado";
+  const metaReady = metaMissing().length === 0;
+  const opByIg = new Map((integrations ?? []).filter((i) => i.provider === "meta" && i.operation_id)
+    .map((i) => [(i.config as { ig_user_id?: string }).ig_user_id, i.operation_id as string]));
+  const metaDaysLeft = metaOn ? daysUntilExpiry(meta) : null;
+
   const tabs = [
     { key: "visao", label: "Visão do mês" },
     { key: "vendas", label: "Marketing × vendas" },
@@ -81,6 +106,7 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
         <MonthPicker month={month} basePath={`/${tenant}/resultados`} />
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}
+      {ok && OK[ok] && <p role="status" className="mt-4 rounded-sm border border-success/20 bg-success/5 p-3 text-body text-success">{OK[ok]}</p>}
 
       <SubTabs className="mt-6" label="Seções" active={aba} tabs={tabs.map((x) => ({ ...x, href: `/${tenant}/resultados?mes=${month.key}&aba=${x.key}` }))} />
 
@@ -253,6 +279,47 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
             <ul className="grid gap-3 sm:grid-cols-2">
               {PROVIDERS.map((p) => {
                 const st = (integrations ?? []).find((i) => i.provider === p.key && !i.operation_id)?.status ?? "desconectado";
+                if (p.key === "meta") return (
+                  <li key={p.key} className={`${card} flex flex-col p-4`}>
+                    <p className="flex items-center gap-2 font-semibold"><Plug className="size-4 text-ink-subtle" aria-hidden /> {p.label}</p>
+                    <p className="mt-1 flex-1 text-body text-ink-muted">
+                      {metaOn
+                        ? `Conectado por ${meta.meta_user?.name ?? "—"} · ${meta.accounts?.length ?? 0} conta(s) do Instagram.`
+                        : p.hint}
+                    </p>
+                    {metaDaysLeft !== null && metaDaysLeft <= 10 && (
+                      <p className="mt-2 text-caption text-warning">
+                        {metaDaysLeft > 0 ? `A autorização vence em ${metaDaysLeft} dia(s): reconecte para não parar.` : "A autorização venceu: reconecte."}
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <StatusBadge {...(metaOn ? { label: "Conectado", tone: "success" as const }
+                        : st === "solicitado" ? { label: "Conexão solicitada", tone: "warning" as const }
+                        : st === "erro" ? { label: "Erro", tone: "danger" as const }
+                        : { label: "Não conectado", tone: "neutral" as const })} />
+                      {ctx.isManager && (
+                        <span className="flex items-center gap-1">
+                          {metaReady ? (
+                            // Link comum: é um redirecionamento para o Facebook, não uma página.
+                            <a href={`/api/integracoes/meta/conectar?t=${tenant}`} className={metaOn ? btnGhost : btnSecondary}>
+                              {metaOn ? <><RefreshCw className="size-4" aria-hidden /> Reconectar</> : "Conectar"}
+                            </a>
+                          ) : st === "desconectado" && (
+                            <form action={requestIntegration.bind(null, tenant, p.key, null)}><button className={btnGhost}>Solicitar conexão</button></form>
+                          )}
+                          {metaOn && (
+                            <form action={disconnectMeta.bind(null, tenant)}>
+                              <button className={btnGhost}><Unplug className="size-4" aria-hidden /> Desconectar</button>
+                            </form>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {ctx.isHub && !metaReady && (
+                      <p className="mt-2 text-caption text-ink-subtle">Para liberar o botão Conectar, configure no servidor: {metaMissing().join(", ")}.</p>
+                    )}
+                  </li>
+                );
                 return (
                   <li key={p.key} className={`${card} flex flex-col p-4`}>
                     <p className="flex items-center gap-2 font-semibold"><Plug className="size-4 text-ink-subtle" aria-hidden /> {p.label}</p>
@@ -272,6 +339,43 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
                 );
               })}
             </ul>
+
+            {metaOn && ctx.isManager && (meta.accounts?.length ?? 0) > 0 && (
+              <form action={saveMetaAccounts.bind(null, tenant)} className={card}>
+                <div className="border-b border-line px-4 py-3">
+                  <h2 className="text-heading font-semibold">Contas do Instagram</h2>
+                  <p className="text-caption text-ink-subtle">
+                    A NEST liga cada conta à loja com o mesmo @ cadastrado. Ajuste o que não bateu. Os números de cada conta entram nos Resultados da loja escolhida.
+                  </p>
+                </div>
+                <ul>
+                  {meta.accounts!.map((a) => (
+                    <li key={a.ig_id} className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
+                      {a.picture
+                        // eslint-disable-next-line @next/next/no-img-element -- foto vem do CDN da Meta, com URL temporária
+                        ? <img src={a.picture} alt="" className="size-8 rounded-full bg-canvas object-cover" />
+                        : <span aria-hidden className="size-8 rounded-full bg-brand-soft" />}
+                      <span className="min-w-40 flex-1">
+                        <span className="block font-semibold">@{a.username}</span>
+                        <span className="block text-caption text-ink-subtle">
+                          Página: {a.page_name}{a.followers !== null && ` · ${formatInt(a.followers)} seguidores`}
+                        </span>
+                      </span>
+                      <label className="sr-only" htmlFor={`conta_${a.ig_id}`}>Loja de @{a.username}</label>
+                      <select id={`conta_${a.ig_id}`} name={`conta_${a.ig_id}`} className={`${input} w-56`}
+                        defaultValue={meta.official_ig_id === a.ig_id ? "marca" : opByIg.get(a.ig_id) ?? ""}>
+                        <option value="">Não usar</option>
+                        <option value="marca">Conta oficial da marca</option>
+                        {(operations ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                      </select>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-end border-t border-line px-4 py-3">
+                  <button className={btnSecondary}>Salvar contas</button>
+                </div>
+              </form>
+            )}
           </section>
           <aside className={`${card} h-fit p-4`}>
             <h2 className="text-heading font-semibold">Importar planilha (CSV)</h2>

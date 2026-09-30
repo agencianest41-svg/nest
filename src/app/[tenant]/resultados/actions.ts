@@ -11,6 +11,9 @@ import { ITEM_FORMAT } from "@/lib/labels";
 import { brandContext, loadBrand } from "@/lib/brand";
 import { runAi } from "@/lib/ai";
 import { CHANNEL, engagementOf, METRIC_FIELDS, parseCsv, toNumber, totals, type ResultEntry } from "@/lib/results";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { unseal } from "@/lib/integrations/crypto";
+import { revokeAccess, writeOperationLinks, type MetaConfig, type MetaSecret } from "@/lib/integrations/meta";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
@@ -219,4 +222,75 @@ export async function monthInsights(slug: string, monthKey: string): Promise<Ins
     }),
   });
   return res.ok ? { status: "ok", ...res.data } : { status: "error", message: res.message };
+}
+
+const integrationsTab = (slug: string, extra = "") => `/${slug}/resultados?aba=integracoes${extra}`;
+
+// Liga cada conta do Instagram a uma loja (ou à conta oficial da marca).
+export async function saveMetaAccounts(slug: string, formData: FormData) {
+  const ctx = await getTenantContext(slug);
+  if (!ctx.isManager) redirect(integrationsTab(slug, "&erro=meta_permissao"));
+  const supabase = await createClient();
+  const [{ data: row }, { data: ops }] = await Promise.all([
+    supabase.from("integrations").select("id, config").eq("tenant_id", ctx.tenant.id).eq("provider", "meta").is("operation_id", null).maybeSingle(),
+    supabase.from("operations").select("id").eq("tenant_id", ctx.tenant.id),
+  ]);
+  const config = (row?.config ?? {}) as MetaConfig;
+  if (!row || !config.accounts?.length) redirect(integrationsTab(slug, "&erro=dados"));
+
+  const valid = new Set((ops ?? []).map((o) => o.id));
+  const mapping = new Map<string, string>();
+  const used = new Set<string>();
+  let official: string | null = null;
+  for (const a of config.accounts) {
+    const choice = String(formData.get(`conta_${a.ig_id}`) ?? "");
+    if (choice === "marca") official ??= a.ig_id;
+    else if (valid.has(choice)) {
+      if (used.has(choice)) redirect(integrationsTab(slug, "&erro=meta_repetida"));
+      mapping.set(a.ig_id, choice);
+      used.add(choice);
+    }
+  }
+
+  const { error } = await supabase.from("integrations").update({ config: { ...config, official_ig_id: official } }).eq("id", row.id);
+  const linkError = error ?? await writeOperationLinks(supabase, ctx.tenant.id, config.accounts, mapping);
+  if (linkError) {
+    console.error("[meta] salvar contas:", linkError.message);
+    redirect(integrationsTab(slug, "&erro=salvar"));
+  }
+  revalidatePath(`/${slug}`, "layout");
+  redirect(integrationsTab(slug, "&ok=meta_contas"));
+}
+
+// Desconecta: tira a permissão na Meta, apaga o token e as ligações das lojas.
+export async function disconnectMeta(slug: string) {
+  const ctx = await getTenantContext(slug);
+  if (!ctx.isManager) redirect(integrationsTab(slug, "&erro=meta_permissao"));
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("integrations").select("id, config")
+    .eq("tenant_id", ctx.tenant.id).eq("provider", "meta").is("operation_id", null).maybeSingle();
+  if (!row) redirect(integrationsTab(slug));
+  const config = (row.config ?? {}) as MetaConfig;
+
+  const admin = createAdminClient();
+  if (admin) {
+    const { data: sealed } = await admin.rpc("integration_secret_get", { p_integration: row.id });
+    if (sealed && config.meta_user) {
+      try {
+        await revokeAccess(config.meta_user.id, unseal<MetaSecret>(sealed as string).user_token);
+      } catch (e) {
+        console.error("[meta] revogar:", e instanceof Error ? e.message : e);
+      }
+    }
+    await admin.rpc("integration_secret_delete", { p_integration: row.id });
+  }
+
+  // Só o modo teste sobrevive: o resto da config era da conexão.
+  const { error } = await supabase.from("integrations").update({
+    status: "desconectado", account_label: null, config: config.test_mode ? { test_mode: true } : {},
+  }).eq("id", row.id);
+  await supabase.from("integrations").delete().eq("tenant_id", ctx.tenant.id).eq("provider", "meta").not("operation_id", "is", null);
+  if (error) redirect(integrationsTab(slug, "&erro=salvar"));
+  revalidatePath(`/${slug}`, "layout");
+  redirect(integrationsTab(slug, "&ok=meta_desconectado"));
 }
