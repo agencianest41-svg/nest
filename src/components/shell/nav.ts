@@ -1,5 +1,5 @@
 import {
-  BarChart3, Building2, CalendarDays, FolderOpen, Handshake, Home, Inbox, Palette, Store, Users, Wallet, type LucideIcon,
+  BarChart3, Building2, CalendarCheck, CalendarDays, FolderOpen, Handshake, Home, Inbox, Palette, Store, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 
 // Mapa único da navegação: poucos lugares no menu, seguindo o ciclo do mês
@@ -24,6 +24,10 @@ export function buildNav({ slug, isManager, isHub, multiStore }: NavFlags): NavS
       key: "lojas", label: "Lojas", icon: Store,
       tabs: [{ href: base, label: "Lojas", keepMonth: true, match: [`${base}/operacoes`] }],
     }),
+    {
+      key: "alinhamento", label: isManager || multiStore ? "Alinhamentos" : "Reunião mensal", icon: CalendarCheck,
+      tabs: [{ href: `${base}/alinhamento`, label: isManager || multiStore ? "Alinhamentos" : "Reunião mensal" }],
+    },
     {
       key: "plano", label: "Plano", icon: CalendarDays,
       tabs: [
@@ -66,7 +70,7 @@ export function buildDeskNav({ isStaff, isAdmin }: DeskFlags): NavSection[] {
   const one = (key: string, label: string, icon: LucideIcon, href: string): NavSection => ({ key, label, icon, tabs: [{ href, label }] });
   return [
     one("mesa", "Minha mesa", Inbox, "/mesa"),
-    ...(isStaff ? [one("carteira", "Carteira", Wallet, "/mesa/carteira"), one("equipe", "Equipe Hub", Users, "/mesa/equipe")] : []),
+    ...(isStaff ? [one("agenda", "Agenda", CalendarCheck, "/mesa/agenda"), one("carteira", "Carteira", Wallet, "/mesa/carteira"), one("equipe", "Equipe Hub", Users, "/mesa/equipe")] : []),
     ...(isAdmin ? [one("marcas", "Marcas", Building2, "/mesa/marcas"), one("parceiros", "Parceiros", Handshake, "/mesa/parceiros")] : []),
   ];
 }
