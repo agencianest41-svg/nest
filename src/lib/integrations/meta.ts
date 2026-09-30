@@ -36,6 +36,9 @@ export type MetaConfig = {
   official_ig_id?: string | null;
   connected_at?: string;
   expires_at?: string | null;
+  /** Última sincronização de insights: erro que parou a conta ou quantos posts vieram. */
+  last_error?: string | null;
+  last_posts?: number;
 };
 
 /** O que vai cifrado para private.integration_secrets. */
@@ -72,14 +75,14 @@ export function metaAuthUrl(redirectUri: string, state: string) {
 // Prova de que a chamada vem do servidor do app (recomendado pela Meta).
 const proof = (token: string) => createHmac("sha256", process.env.META_APP_SECRET!).update(token).digest("hex");
 
-async function graph<T>(url: URL | string, init?: RequestInit): Promise<T> {
+export async function graph<T>(url: URL | string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body?.error) throw new MetaError(body?.error?.message ?? `HTTP ${res.status}`, body?.error?.code);
   return body as T;
 }
 
-function endpoint(path: string, params: Record<string, string>, token?: string) {
+export function endpoint(path: string, params: Record<string, string>, token?: string) {
   const url = new URL(`https://graph.facebook.com/${VERSION}/${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   if (token) {

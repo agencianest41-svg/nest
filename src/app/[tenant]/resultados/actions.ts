@@ -14,6 +14,7 @@ import { CHANNEL, engagementOf, METRIC_FIELDS, parseCsv, toNumber, totals, type 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unseal } from "@/lib/integrations/crypto";
 import { revokeAccess, writeOperationLinks, type MetaConfig, type MetaSecret } from "@/lib/integrations/meta";
+import { syncMetaInsights } from "@/lib/integrations/meta-sync";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
@@ -293,4 +294,21 @@ export async function disconnectMeta(slug: string) {
   if (error) redirect(integrationsTab(slug, "&erro=salvar"));
   revalidatePath(`/${slug}`, "layout");
   redirect(integrationsTab(slug, "&ok=meta_desconectado"));
+}
+
+// "Atualizar agora": a mesma rodada do cron, só para esta marca.
+export async function syncMetaNow(slug: string) {
+  const ctx = await getTenantContext(slug);
+  if (!ctx.isManager) redirect(integrationsTab(slug, "&erro=meta_permissao"));
+  const admin = createAdminClient();
+  if (!admin) redirect(integrationsTab(slug, "&erro=meta_config"));
+  let res;
+  try {
+    res = await syncMetaInsights(admin, ctx.tenant.id);
+  } catch (e) {
+    console.error("[meta] sincronizar:", e instanceof Error ? e.message : e);
+    redirect(integrationsTab(slug, "&erro=meta_sync"));
+  }
+  revalidatePath(`/${slug}`, "layout");
+  redirect(integrationsTab(slug, res.errors.length && !res.accounts ? "&erro=meta_sync" : `&ok=meta_sync&n=${res.posts}`));
 }

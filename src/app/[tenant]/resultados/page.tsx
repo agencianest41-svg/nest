@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Award, Plug, RefreshCw, Unplug } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Award, Plug, RefreshCw, RotateCw, Unplug } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantContext } from "@/lib/tenant";
 import { formatDay, resolveMonth, shiftMonth } from "@/lib/month";
@@ -10,13 +10,14 @@ import { Field } from "@/components/field";
 import { MonthPicker } from "@/components/month-picker";
 import { StatusBadge } from "@/components/status-badge";
 import { btnGhost, btnSecondary, card, input } from "@/components/ui";
-import { disconnectMeta, importCsv, monthInsights, promoteToPractice, requestIntegration, saveMetaAccounts, saveSales } from "./actions";
+import { disconnectMeta, importCsv, monthInsights, promoteToPractice, requestIntegration, saveMetaAccounts, saveSales, syncMetaNow } from "./actions";
+import { formatDateTime } from "@/lib/publishing";
 import { daysUntilExpiry, metaMissing, type MetaConfig } from "@/lib/integrations/meta";
 import { ImportForm } from "./import-form";
 import { InsightsPanel } from "./insights-panel";
 import { SubTabs } from "@/components/sub-tabs";
 
-type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ mes?: string; aba?: string; erro?: string; ok?: string }> };
+type Props = { params: Promise<{ tenant: string }>; searchParams: Promise<{ mes?: string; aba?: string; erro?: string; ok?: string; n?: string }> };
 
 const ERRORS: Record<string, string> = {
   dados: "Confira os campos.", salvar: "Não foi possível salvar.", permissao: "Só Hub e Marca promovem cases.",
@@ -26,6 +27,7 @@ const ERRORS: Record<string, string> = {
   meta_negado: "A conexão foi cancelada no Facebook. Nada foi alterado.",
   meta_falhou: "A Meta não confirmou a conexão. Tente de novo em alguns minutos.",
   meta_repetida: "Cada loja só pode ficar com uma conta do Instagram.",
+  meta_sync: "Não foi possível puxar os insights agora. Veja o motivo no card da Meta.",
 };
 
 const OK: Record<string, string> = {
@@ -33,6 +35,7 @@ const OK: Record<string, string> = {
   meta_vazio: "Conectado, mas nenhuma conta do Instagram veio junto. Verifique se as contas são Profissionais e estão ligadas a uma página do Facebook, e se você marcou essas páginas na hora de autorizar.",
   meta_contas: "Contas salvas.",
   meta_desconectado: "Meta desconectada. O acesso da NEST foi removido.",
+  meta_sync: "Insights atualizados.",
 };
 
 const PROVIDERS = [
@@ -45,7 +48,7 @@ const PROVIDERS = [
 type Row = ResultEntry & { plan_items: { id: string; title: string; format: keyof typeof ITEM_FORMAT } | null };
 
 export default async function ResultadosPage({ params, searchParams }: Props) {
-  const [{ tenant }, { mes, aba = "visao", erro, ok }] = await Promise.all([params, searchParams]);
+  const [{ tenant }, { mes, aba = "visao", erro, ok, n }] = await Promise.all([params, searchParams]);
   const ctx = await getTenantContext(tenant);
   const month = resolveMonth(mes);
   const prev = shiftMonth(month, -1);
@@ -58,7 +61,7 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
     supabase.from("operations").select("id, name, city").eq("tenant_id", ctx.tenant.id).eq("active", true).order("name"),
     supabase.from("operation_sales").select("operation_id, revenue, orders").eq("tenant_id", ctx.tenant.id).eq("month", month.first),
     supabase.from("operation_sales").select("operation_id, revenue").eq("tenant_id", ctx.tenant.id).eq("month", prev.first),
-    supabase.from("integrations").select("provider, operation_id, status, account_label, config").eq("tenant_id", ctx.tenant.id),
+    supabase.from("integrations").select("provider, operation_id, status, account_label, config, last_sync_at").eq("tenant_id", ctx.tenant.id),
   ]);
   const results = (rows ?? []) as Row[];
   const benchmarks = (bench ?? []) as Benchmark[];
@@ -84,7 +87,7 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
   // Meta: a linha da marca guarda a conexão; cada loja ligada tem a própria linha.
   const metaRow = (integrations ?? []).find((i) => i.provider === "meta" && !i.operation_id);
   const meta = (metaRow?.config ?? {}) as MetaConfig;
-  const metaOn = metaRow?.status === "conectado";
+  const metaOn = metaRow?.status === "conectado" || metaRow?.status === "erro";
   const metaReady = metaMissing().length === 0;
   const opByIg = new Map((integrations ?? []).filter((i) => i.provider === "meta" && i.operation_id)
     .map((i) => [(i.config as { ig_user_id?: string }).ig_user_id, i.operation_id as string]));
@@ -106,7 +109,11 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
         <MonthPicker month={month} basePath={`/${tenant}/resultados`} />
       </header>
       {erro && ERRORS[erro] && <p role="alert" className="mt-4 rounded-sm border border-danger/20 bg-danger/5 p-3 text-body text-danger">{ERRORS[erro]}</p>}
-      {ok && OK[ok] && <p role="status" className="mt-4 rounded-sm border border-success/20 bg-success/5 p-3 text-body text-success">{OK[ok]}</p>}
+      {ok && OK[ok] && (
+        <p role="status" className="mt-4 rounded-sm border border-success/20 bg-success/5 p-3 text-body text-success">
+          {OK[ok]}{ok === "meta_sync" && n && ` ${n} post(s) dos últimos 30 dias.`}
+        </p>
+      )}
 
       <SubTabs className="mt-6" label="Seções" active={aba} tabs={tabs.map((x) => ({ ...x, href: `/${tenant}/resultados?mes=${month.key}&aba=${x.key}` }))} />
 
@@ -287,15 +294,23 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
                         ? `Conectado por ${meta.meta_user?.name ?? "—"} · ${meta.accounts?.length ?? 0} conta(s) do Instagram.`
                         : p.hint}
                     </p>
+                    {metaOn && (
+                      <p className="mt-2 text-caption text-ink-subtle">
+                        {metaRow?.last_sync_at
+                          ? `Insights atualizados em ${formatDateTime(metaRow.last_sync_at)} · ${meta.last_posts ?? 0} post(s). Atualiza sozinho todo dia.`
+                          : "Os insights entram em Resultados todo dia de manhã."}
+                      </p>
+                    )}
+                    {metaOn && meta.last_error && <p className="mt-2 text-caption text-danger">{meta.last_error}</p>}
                     {metaDaysLeft !== null && metaDaysLeft <= 10 && (
                       <p className="mt-2 text-caption text-warning">
                         {metaDaysLeft > 0 ? `A autorização vence em ${metaDaysLeft} dia(s): reconecte para não parar.` : "A autorização venceu: reconecte."}
                       </p>
                     )}
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <StatusBadge {...(metaOn ? { label: "Conectado", tone: "success" as const }
+                      <StatusBadge {...(st === "erro" ? { label: "Erro", tone: "danger" as const }
+                        : metaOn ? { label: "Conectado", tone: "success" as const }
                         : st === "solicitado" ? { label: "Conexão solicitada", tone: "warning" as const }
-                        : st === "erro" ? { label: "Erro", tone: "danger" as const }
                         : { label: "Não conectado", tone: "neutral" as const })} />
                       {ctx.isManager && (
                         <span className="flex items-center gap-1">
@@ -306,6 +321,11 @@ export default async function ResultadosPage({ params, searchParams }: Props) {
                             </a>
                           ) : st === "desconectado" && (
                             <form action={requestIntegration.bind(null, tenant, p.key, null)}><button className={btnGhost}>Solicitar conexão</button></form>
+                          )}
+                          {metaOn && (
+                            <form action={syncMetaNow.bind(null, tenant)}>
+                              <button className={btnGhost}><RotateCw className="size-4" aria-hidden /> Atualizar agora</button>
+                            </form>
                           )}
                           {metaOn && (
                             <form action={disconnectMeta.bind(null, tenant)}>
