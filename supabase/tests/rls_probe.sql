@@ -33,14 +33,14 @@ begin
   select count(*) into n from public.calendar_events; out := out || ' loj.events=' || n;
   select count(*) into n from public.regions; out := out || ' loj.regions=' || n;
   select count(*) into n from public.memberships; out := out || ' loj.memberships=' || n;
-  insert into public.monthly_plans (tenant_id, operation_id, month) values (t, belem, '2026-10-01') returning id into plan;
+  insert into public.monthly_plans (tenant_id, operation_id, month) values (t, belem, '2027-03-01') returning id into plan;
   insert into public.plan_items (tenant_id, plan_id, title, status) values (t, plan, 'Reels Círio', 'aprovacao') returning id into item;
   out := out || ' loj.plano+peca=ok';
   begin update public.plan_items set status = 'aprovado' where id = item; out := out || ' loj.aprovar=PERMITIDO(ERRO)';
   exception when others then out := out || ' loj.aprovar=bloqueado'; end;
   begin update public.plan_items set status = 'publicado' where id = item; out := out || ' loj.publicar_sem_aprovar=PERMITIDO(ERRO)';
   exception when others then out := out || ' loj.publicar_sem_aprovar=bloqueado'; end;
-  begin insert into public.monthly_plans (tenant_id, operation_id, month) values (t, recife, '2026-10-01'); out := out || ' loj.plano_outra_loja=PERMITIDO(ERRO)';
+  begin insert into public.monthly_plans (tenant_id, operation_id, month) values (t, recife, '2027-03-01'); out := out || ' loj.plano_outra_loja=PERMITIDO(ERRO)';
   exception when others then out := out || ' loj.plano_outra_loja=bloqueado'; end;
   begin insert into public.calendar_events (tenant_id, scope, title, starts_on, ends_on) values (t, 'nacional', 'x', '2026-10-01', '2026-10-01'); out := out || ' loj.evento_nacional=PERMITIDO(ERRO)';
   exception when others then out := out || ' loj.evento_nacional=bloqueado'; end;
